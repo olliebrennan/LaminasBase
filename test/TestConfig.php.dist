@@ -1,0 +1,8 @@
+<?php
+define('LAMINAS_PATH', getenv('HOME') . '/workspace/laminas/library');
+
+return array(
+    'modules' => array(
+        'LaminasBase',
+    ),
+);

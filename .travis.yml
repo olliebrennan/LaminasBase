@@ -1,0 +1,13 @@
+language: php
+
+php:
+  - 7.2
+
+env:
+ - LAMINAS_PATH=./laminas/library
+
+before_install:
+ - cd test; git clone --depth=1 https://github.com/laminas/laminas-mvc-skeleton.git
+
+script:
+ - phpunit

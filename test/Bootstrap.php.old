@@ -1,0 +1,106 @@
+<?php
+/**
+ * LaminasBase
+ * @author Flávio Gomes da Silva Lisboa <flavio.lisboa@fgsl.eti.br>
+ * @license AGPL-3.0 <https://www.gnu.org/licenses/agpl-3.0.en.html>
+ */
+namespace LaminasBaseTest;
+
+use Laminas\Loader\AutoloaderFactory;
+use Laminas\Mvc\Service\ServiceManagerConfig;
+use Laminas\ServiceManager\ServiceManager;
+use Laminas\Stdlib\ArrayUtils;
+use RuntimeException;
+
+error_reporting(E_ALL | E_STRICT);
+chdir(__DIR__);
+
+class Bootstrap
+{
+    protected static $serviceManager;
+
+    public static function init()
+    {
+        // Load the user-defined test configuration file, if it exists; otherwise, load
+        if (is_readable(__DIR__ . '/TestConfig.php')) {
+            $testConfig = include __DIR__ . '/TestConfig.php';
+        } else {
+            $testConfig = include __DIR__ . '/TestConfig.php.dist';
+        }
+
+        $laminasModulePaths = array(dirname(dirname(__DIR__)));
+        if (($path = static::findParentPath('vendor'))) {
+            $laminasModulePaths[] = $path;
+        }
+        if (($path = static::findParentPath('module')) !== $laminasModulePaths[0]) {
+            $laminasModulePaths[] = $path;
+        }
+
+        $laminasModulePaths  = implode(PATH_SEPARATOR, $laminasModulePaths) . PATH_SEPARATOR;
+        $laminasModulePaths .= getenv('LAMINAS_MODULES_TEST_PATHS') ?: (defined('LAMINAS_MODULES_TEST_PATHS') ? LAMINAS_MODULES_TEST_PATHS : '');
+
+        static::initAutoloader();
+
+        // use ModuleManager to load this module and it's dependencies
+        $baseConfig = array(
+            'module_listener_options' => array(
+                'module_paths' => explode(PATH_SEPARATOR, $laminasModulePaths),
+            ),
+        );
+
+        $config = ArrayUtils::merge($baseConfig, $testConfig);
+
+        $serviceManager = new ServiceManager(new ServiceManagerConfig());
+        $serviceManager->setService('ApplicationConfig', $config);
+        $serviceManager->get('ModuleManager')->loadModules();
+        static::$serviceManager = $serviceManager;
+    }
+
+    public static function getServiceManager()
+    {
+        return static::$serviceManager;
+    }
+
+    protected static function initAutoloader()
+    {
+        $vendorPath = static::findParentPath('vendor');
+
+        if (is_readable($vendorPath . '/autoload.php')) {
+            $loader = include $vendorPath . '/autoload.php';
+        }
+
+        $laminasPath = getenv('LAMINAS_PATH') ?: (defined('LAMINAS_PATH') ? ZF2_PATH : (is_dir($vendorPath . '/LAMINAS/library') ? $vendorPath . '/LAMINAS/library' : false));
+
+        if (!$laminasPath) {
+            throw new RuntimeException('Unable to load LAMINAS. Run `php composer.phar install` or define a LAMINAS_PATH environment variable.');
+        }
+
+        if (isset($loader)) {
+            $loader->add('Laminas', $laminasPath . '/Laminas');
+        } else {
+            include $laminasPath . '/Laminas/Loader/AutoloaderFactory.php';
+            AutoloaderFactory::factory(array(
+                'Laminas\Loader\StandardAutoloader' => array(
+                    'autoregister_zf' => true,
+                    'namespaces' => array(
+                        __NAMESPACE__ => __DIR__ . '/' . __NAMESPACE__,
+                    ),
+                ),
+            ));
+        }
+    }
+
+    protected static function findParentPath($path)
+    {
+        $dir = __DIR__;
+        $previousDir = '.';
+        while (!is_dir($dir . '/' . $path)) {
+            $dir = dirname($dir);
+            if ($previousDir === $dir) return false;
+            $previousDir = $dir;
+        }
+        return $dir . '/' . $path;
+    }
+}
+
+Bootstrap::init();
