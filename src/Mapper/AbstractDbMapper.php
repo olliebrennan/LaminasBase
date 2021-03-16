@@ -14,7 +14,7 @@ use Laminas\Db\Sql\Select;
 use Laminas\Db\Sql\Sql;
 use Laminas\Db\Sql\TableIdentifier;
 use Laminas\Hydrator\HydratorInterface;
-use Laminas\Hydrator\ClassMethods;
+use Laminas\Hydrator\ClassMethodsHydrator;
 use LaminasBase\EventManager\EventProvider;
 use LaminasBase\Db\Adapter\MasterSlaveAdapterInterface;
 
@@ -86,7 +86,7 @@ abstract class AbstractDbMapper extends EventProvider
         }
 
         if (!$this->hydrator instanceof HydratorInterface) {
-            $this->hydrator = new ClassMethods;
+            $this->hydrator = new ClassMethodsHydrator;
         }
 
         if (!is_object($this->entityPrototype)) {
@@ -262,7 +262,7 @@ abstract class AbstractDbMapper extends EventProvider
     public function getHydrator()
     {
         if (!$this->hydrator) {
-            $this->hydrator = new ClassMethods(false);
+            $this->hydrator = new ClassMethodsHydrator(false);
         }
         return $this->hydrator;
     }
